@@ -1,0 +1,40 @@
+# Local Python environment and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+
+# Downloaded media, generated analysis packages, and local model weights
+downloads/
+output/
+outputs/
+artifacts/
+models/
+*.mp4
+*.mkv
+*.webm
+*.mov
+*.avi
+*.m4a
+*.mp3
+*.wav
+*.flac
+*.zip
+*.part
+*.ytdl
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Credentials and local settings
+.env
+.env.*
+!.env.example
+cookies.txt
+*.cookies.txt
+
+# Local access diagnostics (not source artifacts)
+access-check/
