@@ -1,0 +1,66 @@
+name: YouTube download probe
+run-name: Manual YouTube download probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: HTTPS YouTube URL you are authorized to process
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: youtube-download-probe
+  cancel-in-progress: false
+
+jobs:
+  download:
+    # No jobs may start on a private repository: free quota is not verifiable here.
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install free tools
+        run: |
+          python -m pip install 'yt-dlp[default]==2026.10.26'
+          if ! command -v ffprobe >/dev/null || ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          python -m yt_dlp --version
+          node --version
+      - name: Download and verify actual media
+        env:
+          VIDEO_URL: ${{ inputs.url }}
+        run: python scripts/cloud_download_probe.py --url "$VIDEO_URL"
+      - name: Write result summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path('artifacts/download-probe/result.json')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('## Download verification\n\n')
+              if p.exists():
+                  r=json.loads(p.read_text())
+                  f.write('Status: '+r['status']+'\n\n')
+                  if 'media' in r:
+                      f.write('Actual video bytes: '+str(r['media']['bytes'])+'\n')
+                  else:
+                      f.write('No verified complete video. Check the download step log.\n')
+              else:
+                  f.write('Setup interrupted; no download result was produced.\n')
+          PY
